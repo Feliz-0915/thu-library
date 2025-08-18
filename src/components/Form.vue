@@ -16,7 +16,7 @@
                 id="username"
                 type="text"
                 class="form-control"
-                v-model.trim="formData.username"
+                required v-model="formData.username"
               />
             </div>
 
@@ -26,6 +26,7 @@
                 id="password"
                 type="password"
                 class="form-control"
+                minlength="4" maxlength="10"
                 v-model="formData.password"
               />
             </div>
@@ -34,16 +35,33 @@
           <!-- Row 2: whether resident in Australia / gender - also side by side at sm breakpoints -->
           <div class="row g-3 mb-3">
             <div class="col-12 col-sm-6">
-              <div class="form-check mt-2">
+              <label class="form-label d-block">
+                Australian Resident? <span class="text-danger">*</span>
+              </label>
+
+              <div class="form-check form-check-inline">
                 <input
-                  id="isAustralian"
-                  type="checkbox"
                   class="form-check-input"
+                  type="radio"
+                  id="auYes"
+                  name="isAustralian"
+                  value="Yes"
+                  v-model="formData.isAustralian"
+                  required
+                />
+                <label class="form-check-label" for="auYes">Yes</label>
+              </div>
+
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="auNo"
+                  name="isAustralian"
+                  value="No"
                   v-model="formData.isAustralian"
                 />
-                <label class="form-check-label" for="isAustralian">
-                  Australian Resident?
-                </label>
+                <label class="form-check-label" for="auNo">No</label>
               </div>
             </div>
 
@@ -53,6 +71,7 @@
                 id="gender"
                 class="form-select"
                 v-model="formData.gender"
+                required
               >
                 <option disabled value="">Please select</option>
                 <option value="male">Male</option>
@@ -70,6 +89,10 @@
               rows="3"
               class="form-control"
               v-model.trim="formData.reason"
+              required
+              minlength="5"
+              maxlength="200"
+              placeholder="Tell us a short reason (min 5 chars)"
             ></textarea>
           </div>
 
