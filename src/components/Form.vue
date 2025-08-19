@@ -82,9 +82,9 @@
                 @blur="validateGender()"
               >
                 <option value="" disabled>Please select</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="male">male</option>
+                <option value="female">female</option>
+                <option value="other">other</option>
               </select>
               <div v-if="errors.gender" class="invalid-feedback">
                 {{ errors.gender }}
@@ -103,7 +103,7 @@
               v-model.trim="formData.reason"
               @input="validateReason()"
               @blur="validateReason()"
-            />
+            ></textarea>
             <div v-if="errors.reason" class="invalid-feedback">
               {{ errors.reason }}
             </div>
@@ -127,21 +127,26 @@
       </div>
     </div>
 
-    <!--Cards -->
-    <div class="cards-row mt-4" v-if="submittedCards.length">
-      <div class="card" v-for="(card, index) in submittedCards" :key="index">
-        <div class="card-header">User Information</div>
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item">Username: {{ card.username }}</li>
-          <li class="list-group-item">Password: {{ card.password }}</li>
-          <li class="list-group-item">
-            Australian Resident: {{ card.isAustralian ? 'Yes' : 'No' }}
-          </li>
-          <li class="list-group-item">Gender: {{ card.gender }}</li>
-          <li class="list-group-item">Reason: {{ card.reason || 'None' }}</li>
-        </ul>
-      </div>
-    </div>
+    <table v-if="submittedCards.length" class="table mt-4">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Password</th>
+          <th>Australian Resident</th>
+          <th>Gender</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(row, i) in submittedCards" :key="i">
+          <td>{{ row.username }}</td>
+          <td>{{ row.password }}</td>
+          <td>{{ row.isAustralian }}</td>
+          <td>{{ row.gender }}</td>
+          <td>{{ row.reason || 'None' }}</td>
+        </tr>
+      </tbody>
+    </table>
   </main>
 </template>
 
@@ -182,12 +187,12 @@ function validatePassword () {
   const hasNumber = /\d/.test(p)
   const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(p)
 
-  if      (p.length < minLength) errors.value.password = `Password must be at least ${minLength} characters long.`
-  else if (!hasUppercase)        errors.value.password = 'Password must contain at least one uppercase letter.'
-  else if (!hasLowercase)        errors.value.password = 'Password must contain at least one lowercase letter.'
-  else if (!hasNumber)           errors.value.password = 'Password must contain at least one number.'
-  else if (!hasSpecial)          errors.value.password = 'Password must contain at least one special character.'
-  else                           errors.value.password = null
+  if  (p.length < minLength) errors.value.password = `Password must be at least ${minLength} characters long.`
+  else if (!hasUppercase) errors.value.password = 'Password must contain at least one uppercase letter.'
+  else if (!hasLowercase) errors.value.password = 'Password must contain at least one lowercase letter.'
+  else if (!hasNumber) errors.value.password = 'Password must contain at least one number.'
+  else if (!hasSpecial)  errors.value.password = 'Password must contain at least one special character.'
+  else  errors.value.password = null
 
   return !errors.value.password
 }
@@ -235,7 +240,7 @@ function clearForm () {
   Object.assign(formData.value, {
     username: '',
     password: '',
-    isAustralian: null, // Go back to "unselected"
+    isAustralian: null,
     reason: '',
     gender: ''
   })
@@ -244,10 +249,14 @@ function clearForm () {
 
 /* --- disable submit when invalid --- */
 const canSubmit = computed(() => {
-  // Make a static judgement first to avoid a button that can be clicked but fails to be submitted
+  const p = formData.value.password || ''
   return (
     (formData.value.username || '').trim().length >= 3 &&
-    !validatePassword() === false &&
+    p.length >= 8 &&
+    /[A-Z]/.test(p) &&
+    /[a-z]/.test(p) &&
+    /\d/.test(p) &&
+    /[!@#$%^&*(),.?":{}|<>]/.test(p) &&
     formData.value.isAustralian !== null &&
     !!formData.value.gender &&
     (formData.value.reason || '').trim().length >= 10 &&
@@ -262,31 +271,4 @@ const canSubmit = computed(() => {
 
 <style scoped>
 .page { padding-top: 24px; }
-
-/* Cards row */
-.cards-row{
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 18rem;
-  gap: 1rem;
-  overflow-x: auto;
-  padding: .25rem 1rem;
-  scroll-snap-type: x proximity;
-}
-.cards-row .card{
-  scroll-snap-align: start;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,.1);
-}
-.card-header{
-  background-color: #275FDA;
-  color: #fff;
-  padding: 10px;
-  border-radius: 10px 10px 0 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.list-group-item{ padding: 10px; }
 </style>
