@@ -1,104 +1,124 @@
 <!-- src/components/Form.vue -->
 <template>
   <main class="page container py-4">
-    <!-- Centred container: narrows and stays centred with breakpoints -->
     <div class="row justify-content-center">
-      <!-- xs: Full width; sm: 10 columns with 1 column left and 1 column right; md: 8 columns with 2 columns offset left and right -->
       <div class="col-12 col-sm-10 col-md-8">
         <h2 class="text-center mb-4">User Information Form</h2>
 
-        <form @submit.prevent="submitForm">
-          <!-- Row 1: Username / Password -- side-by-side in sm(≥576px) -->
+        <form @submit.prevent="submitForm" novalidate>
+          <!-- Row 1: Username / Password -->
           <div class="row g-3 mb-2">
+            <!-- Username -->
             <div class="col-12 col-sm-6">
               <label for="username" class="form-label">Username</label>
               <input
                 id="username"
                 type="text"
                 class="form-control"
-                required v-model="formData.username"
+                :class="{ 'is-invalid': !!errors.username }"
+                v-model.trim="formData.username"
+                @input="validateName()"
+                @blur="validateName()"
               />
+              <div v-if="errors.username" class="invalid-feedback">
+                {{ errors.username }}
+              </div>
             </div>
 
+            <!-- Password -->
             <div class="col-12 col-sm-6">
               <label for="password" class="form-label">Password</label>
               <input
                 id="password"
                 type="password"
                 class="form-control"
-                minlength="4" maxlength="10"
+                :class="{ 'is-invalid': !!errors.password }"
                 v-model="formData.password"
+                @input="validatePassword()"
+                @blur="validatePassword()"
               />
+              <div v-if="errors.password" class="invalid-feedback">
+                {{ errors.password }}
+              </div>
             </div>
           </div>
 
-          <!-- Row 2: whether resident in Australia / gender - also side by side at sm breakpoints -->
+          <!-- Row 2: Australian Resident / Gender -->
           <div class="row g-3 mb-3">
+            <!-- Australian Resident (tri-state: null/true/false) -->
             <div class="col-12 col-sm-6">
-              <label class="form-label d-block">
-                Australian Resident? <span class="text-danger">*</span>
-              </label>
-
-              <div class="form-check form-check-inline">
+              <div class="form-check mt-2">
                 <input
+                  id="isAustralian"
+                  type="checkbox"
                   class="form-check-input"
-                  type="radio"
-                  id="auYes"
-                  name="isAustralian"
-                  value="Yes"
                   v-model="formData.isAustralian"
-                  required
+                  :true-value="true"
+                  :false-value="false"
+                  :indeterminate="formData.isAustralian === null"
+                  @change="validateResident()"
                 />
-                <label class="form-check-label" for="auYes">Yes</label>
+                <label class="form-check-label" for="isAustralian">
+                  Australian Resident?
+                </label>
               </div>
-
-              <div class="form-check form-check-inline">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  id="auNo"
-                  name="isAustralian"
-                  value="No"
-                  v-model="formData.isAustralian"
-                />
-                <label class="form-check-label" for="auNo">No</label>
-              </div>
+              <small v-if="errors.resident" class="text-danger d-block mt-1">
+                {{ errors.resident }}
+              </small>
+              <small class="text-muted d-block">
+                (Please tick for “Yes”, untick for “No”.)
+              </small>
             </div>
 
+            <!-- Gender -->
             <div class="col-12 col-sm-6">
               <label for="gender" class="form-label">Gender</label>
               <select
                 id="gender"
                 class="form-select"
+                :class="{ 'is-invalid': !!errors.gender }"
                 v-model="formData.gender"
-                required
+                @change="validateGender()"
+                @blur="validateGender()"
               >
-                <option disabled value="">Please select</option>
+                <option value="" disabled>Please select</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
               </select>
+              <div v-if="errors.gender" class="invalid-feedback">
+                {{ errors.gender }}
+              </div>
             </div>
           </div>
 
-          <!-- Row 3: Reason (single column filled) -->
+          <!-- Row 3: Reason -->
           <div class="mb-3">
             <label for="reason" class="form-label">Reason for joining</label>
             <textarea
               id="reason"
               rows="3"
               class="form-control"
+              :class="{ 'is-invalid': !!errors.reason }"
               v-model.trim="formData.reason"
-              required
-              minlength="5"
-              maxlength="200"
-              placeholder="Tell us a short reason (min 5 chars)"
-            ></textarea>
+              @input="validateReason()"
+              @blur="validateReason()"
+            />
+            <div v-if="errors.reason" class="invalid-feedback">
+              {{ errors.reason }}
+            </div>
           </div>
 
-          <!-- button row -->
+          <!-- Buttons -->
           <div class="text-center">
-            <button type="submit" class="btn btn-primary me-2">Submit</button>
+            <button
+              type="submit"
+              class="btn btn-primary me-2"
+              :disabled="!canSubmit"
+              title="Please fix validation errors before submitting"
+            >
+              Submit
+            </button>
             <button type="button" class="btn btn-secondary" @click="clearForm">
               Clear
             </button>
@@ -107,7 +127,7 @@
       </div>
     </div>
 
-    <!-- Activity 6: Display cards after submission (horizontal single line increasing to the right) -->
+    <!--Cards -->
     <div class="cards-row mt-4" v-if="submittedCards.length">
       <div class="card" v-for="(card, index) in submittedCards" :key="index">
         <div class="card-header">User Information</div>
@@ -126,56 +146,139 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
+/* --- form state --- */
 const formData = ref({
   username: '',
   password: '',
-  isAustralian: false,
+  isAustralian: null,
   reason: '',
   gender: ''
 })
 
-const submittedCards = ref([])
+/* --- errors --- */
+const errors = ref({
+  username: null,
+  password: null,
+  resident: null,
+  gender: null,
+  reason: null
+})
 
-const submitForm = () => {
-  submittedCards.value.push({ ...formData.value })
+/* --- validators --- */
+function validateName () {
+  const v = (formData.value.username || '').trim()
+  errors.value.username =
+    v.length < 3 ? 'Name must be at least 3 characters.' : null
+  return !errors.value.username
 }
 
-const clearForm = () => {
+function validatePassword () {
+  const p = formData.value.password || ''
+  const minLength = 8
+  const hasUppercase = /[A-Z]/.test(p)
+  const hasLowercase = /[a-z]/.test(p)
+  const hasNumber = /\d/.test(p)
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(p)
+
+  if      (p.length < minLength) errors.value.password = `Password must be at least ${minLength} characters long.`
+  else if (!hasUppercase)        errors.value.password = 'Password must contain at least one uppercase letter.'
+  else if (!hasLowercase)        errors.value.password = 'Password must contain at least one lowercase letter.'
+  else if (!hasNumber)           errors.value.password = 'Password must contain at least one number.'
+  else if (!hasSpecial)          errors.value.password = 'Password must contain at least one special character.'
+  else                           errors.value.password = null
+
+  return !errors.value.password
+}
+
+function validateResident () {
+  errors.value.resident =
+    formData.value.isAustralian === null
+      ? 'Please confirm whether you are an Australian resident.'
+      : null
+  return !errors.value.resident
+}
+
+function validateGender () {
+  errors.value.gender =
+    !formData.value.gender ? 'Please select a gender.' : null
+  return !errors.value.gender
+}
+
+function validateReason () {
+  const min = 10
+  const v = (formData.value.reason || '').trim()
+  errors.value.reason =
+    v.length < min ? `Reason must be at least ${min} characters.` : null
+  return !errors.value.reason
+}
+
+/* --- submit / clear --- */
+const submittedCards = ref([])
+
+function submitForm () {
+  const ok =
+    validateName() &&
+    validatePassword() &&
+    validateResident() &&
+    validateGender() &&
+    validateReason()
+
+  if (!ok) return
+
+  submittedCards.value.push({ ...formData.value })
+  clearForm()
+}
+
+function clearForm () {
   Object.assign(formData.value, {
     username: '',
     password: '',
-    isAustralian: false,
+    isAustralian: null, // Go back to "unselected"
     reason: '',
     gender: ''
   })
+  Object.keys(errors.value).forEach(k => (errors.value[k] = null))
 }
+
+/* --- disable submit when invalid --- */
+const canSubmit = computed(() => {
+  // Make a static judgement first to avoid a button that can be clicked but fails to be submitted
+  return (
+    (formData.value.username || '').trim().length >= 3 &&
+    !validatePassword() === false &&
+    formData.value.isAustralian !== null &&
+    !!formData.value.gender &&
+    (formData.value.reason || '').trim().length >= 10 &&
+    !errors.value.username &&
+    !errors.value.password &&
+    !errors.value.resident &&
+    !errors.value.gender &&
+    !errors.value.reason
+  )
+})
 </script>
 
 <style scoped>
-.page { /* Overall white space only, does not affect breakpoint behaviour */
-  padding-top: 24px;
-}
+.page { padding-top: 24px; }
 
-/* -- Activity 6: Card Patterns & Horizontal Rows -- */
+/* Cards row */
 .cards-row{
   display: grid;
-  grid-auto-flow: column;      /* Lateral flow, increase to the right */
-  grid-auto-columns: 18rem;    /* Fixed width per card */
+  grid-auto-flow: column;
+  grid-auto-columns: 18rem;
   gap: 1rem;
-  overflow-x: auto;            /* Horizontal scrolling when width is insufficient */
+  overflow-x: auto;
   padding: .25rem 1rem;
   scroll-snap-type: x proximity;
 }
-
 .cards-row .card{
   scroll-snap-align: start;
   border: 1px solid #ccc;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0,0,0,.1);
 }
-
 .card-header{
   background-color: #275FDA;
   color: #fff;
@@ -185,6 +288,5 @@ const clearForm = () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .list-group-item{ padding: 10px; }
 </style>
