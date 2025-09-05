@@ -1,9 +1,8 @@
 <template>
-  <Form />
+  <AppNav />
+  <RouterView />
 </template>
 
 <script setup>
-import Form from './components/Form.vue'
-// import JSONLab from './components/JSON.vue'
+import AppNav from '@/components/AppNav.vue'
 </script>
-
